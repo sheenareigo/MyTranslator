@@ -1,0 +1,137 @@
+﻿@{
+    ViewData["Title"] = "Voice to Text and Translate";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <h2 class="text-center">Voice to Text and Translate</h2>
+            <p class="text-center">Select the language to speak in, and the language to translate into. Then, click the button below and start speaking.</p>
+
+            <form id="translation-form" asp-controller="Home" asp-action="Translate" method="post" asp-route-module="Voice">
+                <div class="form-group text-center">
+                    <label for="input-lang">Input Language</label>
+                    <select id="input-lang" class="form-control d-inline-block" style="width: auto;">
+                        @foreach (var lang in ViewBag.Languages)
+                        {
+                            <option value="@lang.Text">@lang.Text</option>
+                        }
+    
+                        <!-- Add more languages as needed -->
+                    </select>
+
+                    <label for="output-lang" class="ml-3">Output Language</label>
+                    <select id="output-lang" name="selected_lang" class="form-control d-inline-block" style="width: auto;">
+                        @foreach (var lang in ViewBag.Languages)
+                        {
+                            <option value="@lang.Text">@lang.Text</option>
+                        }
+                    </select>
+                </div>
+
+                <input type="hidden" id="query" name="query" value="" />
+
+                <div class="text-center mt-3">
+                    <button id="start-recording" type="button" class="btn" style="background: linear-gradient(135deg, #81c9ef, #74b4e0); color: white; border: none;">
+                        Start Recording
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-mic-fill" viewBox="0 0 16 16">
+                            <path d="M8 1a2 2 0 0 1 2 2v6a2 2 0 0 1-4 0V3a2 2 0 0 1 2-2z" />
+                            <path d="M5 10a3 3 0 0 0 6 0V3a3 3 0 0 0-6 0v7zm7-3a.5.5 0 0 1 .5.5v.539a4.002 4.002 0 0 1-3 3.908V14.5a.5.5 0 0 1-1 0v-2.053a4.002 4.002 0 0 1-3-3.908V7.5a.5.5 0 0 1 1 0v.539A3.001 3.001 0 0 0 8 11a3.001 3.001 0 0 0 2.5-1.961V7.5a.5.5 0 0 1 .5-.5z" />
+                        </svg>
+                    </button>
+
+                    <button type="submit" id="submit-btn" class="btn" style="background: linear-gradient(135deg, #81c9ef, #74b4e0); color: white; border: none;">
+                        Submit for Translation
+                    </button>
+                </div>
+            </form>
+
+            <div class="text-danger text-center" id="error-message" style="@(!string.IsNullOrEmpty(ViewBag.ErrorMessage) ? "" : "display: none;")">
+                @if (!string.IsNullOrEmpty(ViewBag.ErrorMessage))
+                {
+                    @ViewBag.ErrorMessage
+                }
+            </div>
+
+            <div class="mt-4">
+                <h5 class="font-weight-bold">Transcribed Text:</h5>
+                <div id="transcribed-text" class="alert alert-info p-3">
+
+             </div>
+
+            </div>
+
+            @if (ViewBag.Result != null)
+            {
+                <div class="mt-4">
+                    <h5 class="font-weight-bold">Translated Text</h5>
+                    <div id="translated-text" class="alert alert-info p-3">
+                        @Html.Raw(ViewBag.Result)
+                    </div>
+                </div>
+            }
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+
+        function validateLanguages(event) {
+            const inputLang = document.getElementById('input-lang').value;
+            const outputLang = document.getElementById('output-lang').value;
+            const errorMessage = document.getElementById('error-message');
+
+            if (inputLang === outputLang) {
+                errorMessage.style.display = 'block';
+                errorMessage.textContent = "Input and output language cannot be the same";
+                event.preventDefault(); // Prevent the form from being submitted
+            } else {
+                errorMessage.style.display = 'none';
+            }
+        }
+
+        document.getElementById('submit-btn').addEventListener('click', validateLanguages);
+
+        let recognition;
+        let isRecording = false;
+
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onstart = function () {
+                isRecording = true;
+                document.getElementById('start-recording').innerText = "Recording...";
+            };
+
+            recognition.onresult = function (event) {
+                let transcript = event.results[0][0].transcript;
+                document.getElementById('query').value = transcript;
+                document.getElementById('transcribed-text').innerText = transcript;
+            };
+
+            recognition.onerror = function (event) {
+                console.error("Speech recognition error", event);
+            };
+
+            recognition.onend = function () {
+                isRecording = false;
+                document.getElementById('start-recording').innerText = "Start Recording";
+            };
+        } else {
+            alert("Your browser does not support speech recognition. Please use Chrome.");
+        }
+
+        document.getElementById('start-recording').addEventListener('click', function () {
+            if (isRecording) {
+                recognition.stop();
+            } else {
+                recognition.lang = document.getElementById('input-lang').value;
+                recognition.start();
+            }
+        });
+    </script>
+}
